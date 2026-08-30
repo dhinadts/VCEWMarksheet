@@ -45,6 +45,8 @@ coverage/
 
 # Runtime output
 storage/
+!backend/app/storage/
+!backend/app/storage/*.py
 *.log
 *.pid
 
