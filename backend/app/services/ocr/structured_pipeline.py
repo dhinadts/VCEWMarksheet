@@ -26,6 +26,17 @@ class StructuredOCRResult:
     columns: int
 
 
+def question_maximum(question_number: int, assessment_maximum: Decimal) -> Decimal:
+    """Return the printed maximum for a VCEW valuation-sheet question."""
+    if question_number <= 10:
+        return Decimal("2")
+    if question_number <= 15:
+        return Decimal("13")
+    if question_number == 16:
+        return Decimal("15")
+    return assessment_maximum
+
+
 def process_structured_marksheet(
     image: bytes,
     classifier: DigitClassifier,
@@ -44,7 +55,9 @@ def process_structured_marksheet(
         page_height, page_width = preprocessing.binary_page.shape
         top, bottom = int(page_height * 0.45), int(page_height * 0.86)
         left, right = int(page_width * 0.05), int(page_width * 0.95)
-        table_grid = detect_grid(preprocessing.binary_page[top:bottom, left:right], minimum_cell_size=10)
+        # Phone screenshots and messaging apps can downscale the paper enough
+        # that valid table rows are only 8-9 pixels high after correction.
+        table_grid = detect_grid(preprocessing.binary_page[top:bottom, left:right], minimum_cell_size=8)
         translated = tuple(CellRegion(cell.row, cell.column, cell.x + left, cell.y + top, cell.width, cell.height) for cell in table_grid.cells)
         grid = GridDetection(translated, table_grid.rows, table_grid.columns, table_grid.horizontal_lines, table_grid.vertical_lines)
     if not grid.cells or grid.columns < 1:
@@ -67,7 +80,8 @@ def process_structured_marksheet(
         if debug_path: cv2.imwrite(str(debug_path / f"cell_{sequence:03d}.png"), crop)
         field_name = f"question_{sequence:02d}" if university_template else f"cell_r{cell.row:03d}_c{cell.column:03d}"
         try:
-            recognition = extract_handwritten_numeric(crop, classifier, minimum=0, maximum=maximum)
+            cell_maximum = question_maximum(sequence, maximum) if university_template else maximum
+            recognition = extract_handwritten_numeric(crop, classifier, minimum=0, maximum=cell_maximum)
             results.append(CellOCRResult(field_name, cell, recognition, None))
         except ValueError as exc:
             results.append(CellOCRResult(field_name, cell, None, str(exc)))

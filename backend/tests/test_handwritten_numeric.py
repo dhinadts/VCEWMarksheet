@@ -56,3 +56,22 @@ def test_low_confidence_requires_review_and_json_uses_number(tmp_path):
     assert result.requires_review is True
     assert saved["numeric_value"] == 7
     assert isinstance(saved["numeric_value"], int)
+
+
+def test_ignores_tick_mark_and_extracts_only_the_handwritten_number():
+    image = np.full((90, 180), 255, dtype=np.uint8)
+    cv2.line(image, (12, 44), (25, 60), 0, 5)
+    cv2.line(image, (25, 60), (55, 20), 0, 5)
+    cv2.rectangle(image, (105, 18), (132, 70), 0, -1)
+    result = extract_handwritten_numeric(image, SequenceClassifier([(7, 0.95)]), maximum=10)
+    assert result.raw_text == "7"
+    assert result.numeric_value == Decimal("7")
+    assert len(result.glyphs) == 1
+
+
+def test_tick_without_a_number_is_not_classified_as_a_digit():
+    image = np.full((80, 100), 255, dtype=np.uint8)
+    cv2.line(image, (15, 38), (30, 56), 0, 5)
+    cv2.line(image, (30, 56), (68, 14), 0, 5)
+    with pytest.raises(ValueError, match="No handwritten numeric glyph"):
+        extract_handwritten_numeric(image, SequenceClassifier([]), maximum=10)

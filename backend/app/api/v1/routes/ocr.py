@@ -16,7 +16,7 @@ from app.schemas.common import ok
 from app.schemas.ocr import OCRReviewRequest
 from app.services.ocr import OpenCVDnnDigitClassifier
 from app.services.ocr.digit_recognizer import SyntheticKnnDigitClassifier
-from app.services.ocr.structured_pipeline import process_structured_marksheet
+from app.services.ocr.structured_pipeline import process_structured_marksheet, question_maximum
 from app.storage import get_document_storage
 
 router = APIRouter()
@@ -92,9 +92,9 @@ def review_marksheet(marksheet_id: uuid.UUID, body: OCRReviewRequest, user: User
         correction = corrections.get(row.id)
         final_value = correction.corrected_numeric_value if correction else row.numeric_value
         question_number = int(row.field_name.rsplit("_", 1)[-1]) if row.field_name.startswith("question_") else None
-        question_maximum = Decimal("2") if question_number and question_number <= 10 else Decimal("13") if question_number and question_number <= 15 else Decimal("15") if question_number == 16 else assessment.maximum_marks
-        if final_value is None or final_value < 0 or final_value > question_maximum:
-            raise HTTPException(422, detail={"code": "MARK_EXCEEDS_MAXIMUM", "message": f"{row.field_name} must be between 0 and {question_maximum}"})
+        maximum = question_maximum(question_number, assessment.maximum_marks) if question_number else assessment.maximum_marks
+        if final_value is None or final_value < 0 or final_value > maximum:
+            raise HTTPException(422, detail={"code": "MARK_EXCEEDS_MAXIMUM", "message": f"{row.field_name} must be between 0 and {maximum}"})
         if question_number and question_number >= 11:
             if not correction or correction.selected_option not in ("A", "B"):
                 raise HTTPException(422, detail={"code": "OPTION_REQUIRED", "message": f"Select option A or B for question {question_number}"})

@@ -219,6 +219,9 @@ def _numeric_components(binary: np.ndarray, *, allow_decimal: bool) -> list[tupl
         touches_border = x == 0 or y == 0 or x + box_width >= width or y + box_height >= height
         if touches_border or area < max(3, page_area * 0.0004):
             continue
+        component = binary[y : y + box_height, x : x + box_width]
+        if _looks_like_tick(component):
+            continue
         boxes.append((x, y, box_width, box_height, area))
     if not boxes:
         return []
@@ -230,6 +233,51 @@ def _numeric_components(binary: np.ndarray, *, allow_decimal: bool) -> list[tupl
             continue
         components.append((x, y, box_width, box_height, decimal))
     return sorted(components, key=lambda item: item[0])
+
+
+def _looks_like_tick(component: np.ndarray) -> bool:
+    """Identify a check mark made from two joined diagonal strokes.
+
+    A tick has no closed loop and normally contains two dominant diagonals
+    meeting near the lower part of the glyph. Requiring both slope directions
+    avoids discarding narrow handwritten digits such as 1 and 7.
+    """
+    height, width = component.shape
+    if height < 6 or width < 6 or width / height < 0.70:
+        return False
+    contours, hierarchy = cv2.findContours(component, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return False
+    if hierarchy is not None and any(item[3] >= 0 for item in hierarchy[0]):
+        return False
+    lines = cv2.HoughLinesP(
+        component,
+        1,
+        np.pi / 180,
+        threshold=max(4, min(width, height) // 4),
+        minLineLength=max(4, min(width, height) // 3),
+        maxLineGap=max(2, min(width, height) // 5),
+    )
+    if lines is None:
+        return False
+    positive: list[tuple[int, int, int, int]] = []
+    negative: list[tuple[int, int, int, int]] = []
+    for x1, y1, x2, y2 in lines[:, 0]:
+        dx, dy = int(x2 - x1), int(y2 - y1)
+        if not dx or abs(dy / dx) < 0.30:
+            continue
+        (positive if dy / dx > 0 else negative).append((int(x1), int(y1), int(x2), int(y2)))
+    if not positive or not negative:
+        return False
+
+    join_tolerance = max(4.0, min(width, height) * 0.35)
+    for first in positive:
+        for second in negative:
+            endpoints_a = ((first[0], first[1]), (first[2], first[3]))
+            endpoints_b = ((second[0], second[1]), (second[2], second[3]))
+            if min(math.dist(a, b) for a in endpoints_a for b in endpoints_b) <= join_tolerance:
+                return True
+    return False
 
 
 def _prepare_model_glyph(glyph: np.ndarray) -> np.ndarray:
