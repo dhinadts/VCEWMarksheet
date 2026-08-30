@@ -36,7 +36,7 @@ def seed_reference_marksheet(image_path: str | Path = "../docs/MarkSheet.jpeg") 
             .order_by(ProfessorAssignment.created_at.desc())
         )
         assessment = db.scalar(select(Assessment).where(Assessment.course_offering_id == assignment.course_offering_id))
-        student = db.scalar(select(Student).where(Student.roll_number == "VCEW1001"))
+        student = db.scalar(select(Student).where(Student.roll_number == "DEMOSTU01"))
         if not all((user, professor, assignment, assessment, student)):
             raise RuntimeError("Run scripts.seed before loading the reference marksheet")
 

@@ -2,7 +2,7 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-tests"
-os.environ["DEMO_DEFAULT_PASSWORD"] = "Qwerty@123"
+os.environ["DEMO_DEFAULT_PASSWORD"] = "1234"
 os.environ["DOCUMENT_STORAGE_BACKEND"] = "local"
 
 import pytest
@@ -39,8 +39,8 @@ def client(db):
         yield test_client
 
 
-def login(client, username="ADMIN02"):
-    response = client.post("/api/v1/auth/login", json={"username": username, "password": "Qwerty@123"})
+def login(client, username="ADMIN01"):
+    response = client.post("/api/v1/auth/login", json={"username": username, "password": "1234"})
     assert response.status_code == 200
     token = response.json()["data"]["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -56,5 +56,5 @@ def professor_headers(client): return login(client, "PROF01")
 
 @pytest.fixture()
 def student_headers(db):
-    user = db.query(User).filter(User.username == "VCEW1001").one()
+    user = db.query(User).filter(User.username == "DEMOSTU01").one()
     return {"Authorization": f"Bearer {create_access_token(str(user.id), user.user_type.value)}"}

@@ -6,7 +6,7 @@ from app.models.models import AcademicClass, Assessment, Professor, ProfessorAss
 def test_seed_is_complete_and_idempotent(db):
     from scripts.seed import seed
     first = seed(db); second = seed(db)
-    assert first["users"] == second["users"] == 63
+    assert first["users"] == second["users"] == 12
     assert first["courses"] == 1
 
 
@@ -41,7 +41,7 @@ def test_professor_subjects_include_students_and_internal_marks(client, professo
     assert subjects
     assert subjects[0]["course_code"]
     assert subjects[0]["course_name"]
-    assert len(subjects[0]["students"]) == 50
+    assert len(subjects[0]["students"]) == 10
     assert "marks" in subjects[0]["students"][0]
 
 
