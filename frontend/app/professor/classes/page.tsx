@@ -1,0 +1,2 @@
+import { ResourcePage } from "@/components/admin/resource-page";import { serverApi } from "@/lib/server-api";import type { PageData,RecordRow } from "@/lib/types";
+export default async function Page(){const data=await serverApi<PageData<RecordRow>>("/classes?page_size=100");return <ResourcePage title="My classes" description="Class groups available for your assigned subjects." rows={data.items} endpoint="/classes" canCreate={false} columns={[{key:"code",label:"Class code"},{key:"section",label:"Section"},{key:"batch",label:"Batch"},{key:"strength",label:"Strength"}]}/>}
