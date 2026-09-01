@@ -208,6 +208,9 @@ class MarksheetUpload(UUIDMixin, TimestampMixin, Base):
     processing_status: Mapped[str] = mapped_column(String(30), default="UPLOADED")
     review_status: Mapped[str] = mapped_column(String(30), default="PENDING")
     client_request_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
+    computerized_storage_key: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
+    approved_total: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class OCRJob(UUIDMixin, TimestampMixin, Base):

@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     aws_s3_bucket: str | None = None
     aws_s3_endpoint: str | None = None
     aws_s3_force_path_style: bool = False
+    aws_ses_region: str | None = None
+    university_marks_email: str | None = None
+    marks_email_sender: str | None = None
     handwriting_model_path: str | None = None
     ocr_mark_column_indices: str = "2,-1"
 

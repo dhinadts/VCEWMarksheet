@@ -51,4 +51,4 @@ class S3DocumentStorage:
 
 def _content_type(key: str) -> str:
     extension = key.rsplit(".", 1)[-1].lower()
-    return {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(extension, "application/octet-stream")
+    return {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp", "csv": "text/csv", "zip": "application/zip"}.get(extension, "application/octet-stream")

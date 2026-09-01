@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from app.api.v1.routes import ocr as ocr_route
@@ -33,3 +34,8 @@ def test_process_review_correction_and_approval_preserve_raw_value(client, profe
     approved = client.post(f"/api/v1/marksheets/{marksheet_id}/approve", headers=professor_headers)
     assert approved.status_code == 200
     assert approved.json()["data"]["review_status"] == "APPROVED"
+    from app.models.models import MarksheetUpload
+    saved_upload = db.get(MarksheetUpload, uuid.UUID(marksheet_id))
+    assert saved_upload.computerized_storage_key.endswith(".csv")
+    assert saved_upload.approved_total == Decimal("13")
+    assert (tmp_path / saved_upload.computerized_storage_key).is_file()

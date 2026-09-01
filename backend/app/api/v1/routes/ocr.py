@@ -10,13 +10,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_roles
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.models import (Assessment, MarksheetUpload, OCRExtraction, OCRJob, Professor, ProfessorAssignment,
-                               User, UserType)
+from app.models.models import (Assessment, Course, CourseOffering, MarksheetUpload, OCRExtraction, OCRJob, Professor,
+                               ProfessorAssignment, Student, User, UserType)
 from app.schemas.common import ok
 from app.schemas.ocr import OCRReviewRequest
 from app.services.ocr import OpenCVDnnDigitClassifier
 from app.services.ocr.digit_recognizer import SyntheticKnnDigitClassifier
 from app.services.ocr.structured_pipeline import process_structured_marksheet, question_maximum
+from app.services.computerized_marksheet import build_computerized_csv
 from app.storage import get_document_storage
 
 router = APIRouter()
@@ -117,5 +118,21 @@ def approve_marksheet(marksheet_id: uuid.UUID, user: User = Depends(staff), db: 
     ensure_access(db, user, upload)
     pending = db.scalar(select(OCRExtraction).where(OCRExtraction.marksheet_upload_id == upload.id, OCRExtraction.requires_review.is_(True)))
     if upload.review_status != "REVIEWED" or pending: raise HTTPException(409, detail={"code": "REVIEW_REQUIRED", "message": "All OCR values must be reviewed before approval"})
-    upload.review_status = "APPROVED"; upload.processing_status = "APPROVED"; db.add(upload); db.commit()
+    rows = db.scalars(select(OCRExtraction).where(OCRExtraction.marksheet_upload_id == upload.id)).all()
+    student = db.get(Student, upload.student_id)
+    offering = db.get(CourseOffering, upload.course_offering_id)
+    assessment = db.get(Assessment, upload.assessment_id)
+    course = db.get(Course, offering.course_id)
+    computerized, total = build_computerized_csv(upload, student, assessment, course, rows)
+    storage = get_document_storage(get_settings())
+    storage_key = f"computerized/{student.department_id}/{assessment.id}/{upload.id}.csv"
+    storage.upload(storage_key, computerized)
+    upload.computerized_storage_key = storage_key
+    upload.approved_total = total
+    upload.approved_at = datetime.now(UTC)
+    upload.review_status = "APPROVED"; upload.processing_status = "APPROVED"; db.add(upload)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback(); storage.delete(storage_key); raise
     return ok(response_for(db, upload), "Marksheet approved")
