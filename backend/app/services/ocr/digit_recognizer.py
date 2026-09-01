@@ -134,6 +134,10 @@ def extract_handwritten_numeric(
         raise ValueError("review_confidence must be between 0 and 1")
     gray = _load_grayscale(image)
     binary = _binarize(gray)
+    # Cell crops may place a valid handwritten stroke on the crop boundary.
+    # Add background padding so border-touch rejection removes scan artefacts,
+    # not digits written close to a ruled baseline.
+    binary = cv2.copyMakeBorder(binary, 4, 4, 4, 4, cv2.BORDER_CONSTANT, value=0)
     components = _numeric_components(binary, allow_decimal=allow_decimal)
     if not components:
         raise ValueError("No handwritten numeric glyph was detected")

@@ -59,7 +59,10 @@ def process_marksheet(marksheet_id: uuid.UUID, user: User = Depends(staff), db: 
         db.execute(delete(OCRExtraction).where(OCRExtraction.marksheet_upload_id == upload.id))
         for item in result.cells:
             recognition = item.recognition
-            db.add(OCRExtraction(marksheet_upload_id=upload.id, field_name=item.field_name, raw_text=recognition.raw_text if recognition else "", numeric_value=recognition.numeric_value if recognition else None, confidence=Decimal(str(recognition.confidence if recognition else 0)), bounding_box_json=item.cell.bounding_box, recognizer_version=classifier.version, requires_review=True))
+            bounding_box = item.cell.bounding_box
+            if item.selected_option:
+                bounding_box = {**bounding_box, "selected_option": item.selected_option}
+            db.add(OCRExtraction(marksheet_upload_id=upload.id, field_name=item.field_name, raw_text=recognition.raw_text if recognition else "", numeric_value=recognition.numeric_value if recognition else None, confidence=Decimal(str(recognition.confidence if recognition else 0)), bounding_box_json=bounding_box, recognizer_version=classifier.version, requires_review=True))
         job.status = "COMPLETED"; job.recognizer_version = classifier.version
         upload.processing_status = "OCR_COMPLETED"; upload.review_status = "REVIEW_REQUIRED"
         db.add_all([job, upload]); db.commit()
