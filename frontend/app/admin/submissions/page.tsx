@@ -1,0 +1,2 @@
+import { SubmissionTable,type Submission } from "@/components/submissions/submission-table";import { serverApi } from "@/lib/server-api";
+export default async function Page(){const rows=await serverApi<Submission[]>("/submissions/inbox");return <><div className="page-heading"><div><p className="eyebrow navy">College Admin</p><h1>Professor submissions</h1><p>Review computerized marksheets submitted by all departments and professors.</p></div></div><SubmissionTable rows={rows} role="ADMIN"/></>}

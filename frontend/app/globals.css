@@ -344,6 +344,7 @@ a {
   font-size: 0.84rem;
   margin: 0;
 }
+.submission-error { margin: 18px; }
 .login-help {
   font-size: 0.78rem;
   color: var(--muted);

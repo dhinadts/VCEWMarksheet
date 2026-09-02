@@ -135,6 +135,7 @@ def approve_marksheet(marksheet_id: uuid.UUID, user: User = Depends(staff), db: 
     upload.computerized_storage_key = storage_key
     upload.approved_total = total
     upload.approved_at = datetime.now(UTC)
+    upload.submission_status = "READY_FOR_ADMIN"
     upload.review_status = "APPROVED"; upload.processing_status = "APPROVED"; db.add(upload)
     try:
         db.commit()

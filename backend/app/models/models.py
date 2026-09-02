@@ -211,6 +211,10 @@ class MarksheetUpload(UUIDMixin, TimestampMixin, Base):
     computerized_storage_key: Mapped[str | None] = mapped_column(String(500), unique=True, nullable=True)
     approved_total: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    submission_status: Mapped[str] = mapped_column(String(30), default="DRAFT", index=True)
+    submitted_to_admin_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    admin_reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    admin_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class OCRJob(UUIDMixin, TimestampMixin, Base):
