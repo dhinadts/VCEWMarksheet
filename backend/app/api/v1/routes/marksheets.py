@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_roles
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.models import (Assessment, CourseOffering, MarksheetUpload, Professor, ProfessorAssignment,
-                               Student, User, UserType)
+from app.models.models import (AcademicYear, Assessment, Department, CourseOffering, MarksheetUpload, Professor,
+                               ProfessorAssignment, Semester, Student, User, UserType)
 from app.schemas.common import ok
 from app.services.ocr import preprocess_marksheet
+from app.services.storage_keys import original_marksheet_key, student_marksheet_prefix
 from app.storage import get_document_storage
 
 router = APIRouter()
@@ -65,7 +66,11 @@ async def upload_marksheet(
         raise HTTPException(409, detail={"code": "DUPLICATE_MARKSHEET", "message": "Possible duplicate marksheet detected", "existing_id": str(duplicate.id)})
     upload_id = uuid.uuid4()
     extension = ALLOWED_TYPES[file.content_type]
-    storage_key = f"marksheets/{assessment_id}/{upload_id}{extension}"
+    academic_year = db.get(AcademicYear, offering.academic_year_id)
+    department = db.get(Department, student.department_id)
+    semester = db.get(Semester, offering.semester_id)
+    prefix = student_marksheet_prefix(academic_year, department, semester, student)
+    storage_key = original_marksheet_key(prefix, assessment_id, upload_id, extension)
     storage = get_document_storage(get_settings())
     storage.upload(storage_key, content)
     row = MarksheetUpload(id=upload_id, student_id=student_id, assessment_id=assessment_id, course_offering_id=course_offering_id, uploaded_by=user.id, source=source, original_filename=Path(file.filename or f"capture{extension}").name, storage_key=storage_key, mime_type=file.content_type, checksum_sha256=checksum, size_bytes=len(content), capture_quality_json=preprocessing.quality.as_dict(), client_request_id=client_request_id)

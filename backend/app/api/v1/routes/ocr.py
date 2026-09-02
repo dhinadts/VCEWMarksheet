@@ -10,14 +10,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_roles
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.models import (Assessment, Course, CourseOffering, MarksheetUpload, OCRExtraction, OCRJob, Professor,
-                               ProfessorAssignment, Student, User, UserType)
+from app.models.models import (AcademicYear, Assessment, Course, CourseOffering, Department, MarksheetUpload,
+                               OCRExtraction, OCRJob, Professor, ProfessorAssignment, Semester, Student, User, UserType)
 from app.schemas.common import ok
 from app.schemas.ocr import OCRReviewRequest
 from app.services.ocr import OpenCVDnnDigitClassifier
 from app.services.ocr.digit_recognizer import SyntheticKnnDigitClassifier
 from app.services.ocr.structured_pipeline import process_structured_marksheet, question_maximum
 from app.services.computerized_marksheet import build_computerized_csv
+from app.services.storage_keys import computerized_marksheet_key, student_marksheet_prefix
 from app.storage import get_document_storage
 
 router = APIRouter()
@@ -123,9 +124,13 @@ def approve_marksheet(marksheet_id: uuid.UUID, user: User = Depends(staff), db: 
     offering = db.get(CourseOffering, upload.course_offering_id)
     assessment = db.get(Assessment, upload.assessment_id)
     course = db.get(Course, offering.course_id)
+    academic_year = db.get(AcademicYear, offering.academic_year_id)
+    department = db.get(Department, student.department_id)
+    semester = db.get(Semester, offering.semester_id)
     computerized, total = build_computerized_csv(upload, student, assessment, course, rows)
     storage = get_document_storage(get_settings())
-    storage_key = f"computerized/{student.department_id}/{assessment.id}/{upload.id}.csv"
+    prefix = student_marksheet_prefix(academic_year, department, semester, student)
+    storage_key = computerized_marksheet_key(prefix, assessment.id, upload.id)
     storage.upload(storage_key, computerized)
     upload.computerized_storage_key = storage_key
     upload.approved_total = total
